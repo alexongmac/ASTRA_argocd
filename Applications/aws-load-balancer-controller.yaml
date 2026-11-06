@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+spec:
+  project: astra
+  source:
+    repoURL: https://aws.github.io/eks-charts
+    chart: aws-load-balancer-controller
+    targetRevision: 3.6.1 # example only; pin the version you actually use
+    helm:
+      releaseName: aws-load-balancer-controller
+      valuesObject:
+        clusterName: astra-eks-development-cluster
+        region: us-east-1
+        vpcId: vpc-0123456789abcdef0 # replace with the real value of $VPC_ID
+        serviceAccount:
+          create: true
+          name: aws-load-balancer-controller
+          # annotations:
+          #   eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/<LBC_ROLE>
+        resources:
+          requests:
+            cpu: 50m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

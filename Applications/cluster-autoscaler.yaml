@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-autoscaler
+  namespace: argocd
+spec:
+  project: astra
+  source:
+    repoURL: https://kubernetes.github.io/autoscaler
+    chart: cluster-autoscaler
+    targetRevision: 9.59.0 # example only; pin the version you actually use
+    helm:
+      releaseName: cluster-autoscaler
+      valuesObject:
+        autoDiscovery:
+          clusterName: astra-eks-development-cluster
+        awsRegion: us-east-1
+        rbac:
+          serviceAccount:
+            create: false
+            name: cluster-autoscaler
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        extraArgs:
+          balance-similar-node-groups: true
+          skip-nodes-with-system-pods: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

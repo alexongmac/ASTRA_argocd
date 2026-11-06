@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  accounts.developer: apiKey, login
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  policy.csv: |
+    p, role:developer, applications, get, astra/*, allow
+    p, role:developer, applications, create, astra/*, allow
+    p, role:developer, applications, update, astra/*, allow
+    p, role:developer, applications, delete, astra/*, allow
+    p, role:developer, applications, sync, astra/*, allow
+    p, role:developer, applications, action/*, astra/*, allow
+    p, role:developer, logs, get, astra/*, allow
+    p, role:developer, exec, create, astra/*, allow
+    p, role:developer, projects, get, astra, allow
+    p, role:developer, repositories, get, *, allow
+    p, role:developer, clusters, get, *, allow
+    g, developer, role:developer
+  policy.default: ""
