@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: astra
+  namespace: argocd
+spec:
+  description: ASTRA cluster workloads (monitoring, policy, networking, RDS tooling)
+  sourceRepos:
+    - "https://github.com/alexongmac/ASTRA_argocd.git"
+    - "https://aws.github.io/eks-charts"
+    - "https://traefik.github.io/charts"
+    - "https://prometheus-community.github.io/helm-charts"
+    - "https://grafana.github.io/helm-charts"
+    - "https://kubernetes.github.io/autoscaler"
+    - "https://kyverno.github.io/kyverno/"
+    - "https://aquasecurity.github.io/helm-charts/"
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
