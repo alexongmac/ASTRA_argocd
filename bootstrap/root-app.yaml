@@ -3,6 +3,12 @@ kind: Application
 metadata:
   name: astra-root
   namespace: argocd
+  annotations:
+    # Client-side diff fails on the child Application CRDs with
+    # ".status.observedGeneration: field not declared in schema", blocking
+    # comparison entirely. Server-side diff offloads the merge to the API
+    # server, which has the correct schema for the field.
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
