@@ -17,7 +17,11 @@ spec:
         awsRegion: us-east-1
         rbac:
           serviceAccount:
-            create: false
+            # Must be true - nothing else creates this SA. The Terraform
+            # aws_eks_pod_identity_association binds IAM to it by name but
+            # doesn't create it; EKS Pod Identity needs no SA annotation
+            # (unlike IRSA), so the chart-created SA works as-is.
+            create: true
             name: cluster-autoscaler
         resources:
           requests:
