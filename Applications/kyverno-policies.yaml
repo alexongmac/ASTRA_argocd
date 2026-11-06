@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    # Applies after kyverno.yaml's Application (wave 0). Kyverno and its
+    # ClusterPolicy CRD must already exist, or ArgoCD's comparison fails
+    # on this resource and blocks the whole app-of-apps.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-resources
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "CPU and memory limits are required"
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
