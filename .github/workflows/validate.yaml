@@ -1,0 +1,40 @@
+name: Validate manifests
+
+on:
+  pull_request:
+    paths:
+      - "Applications/**"
+      - "bootstrap/**"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "Applications/**"
+      - "bootstrap/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: Applications bootstrap
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+
+      - name: kubeconform
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: >-
+            -summary
+            -ignore-missing-schemas
+            -skip CustomResourceDefinition
+            -kubernetes-version 1.31.0
+            Applications bootstrap
