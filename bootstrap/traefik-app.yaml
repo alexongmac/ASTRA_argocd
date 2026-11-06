@@ -1,3 +1,10 @@
+# Lives in bootstrap/ (applied directly via kubectl), NOT in Applications/
+# synced by astra-root. The traefik ingresses in Applications/ reference
+# ingressClassName: traefik, and the AWS LB controller's admission webhook
+# rejects an ingress whose IngressClass doesn't exist yet - which happens
+# during astra-root's server-side-diff comparison, before any sync runs. So
+# Traefik (and its IngressClass) must be installed independently and first,
+# or it would deadlock its own ingresses' comparison inside the same app.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
