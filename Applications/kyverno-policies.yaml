@@ -2,6 +2,10 @@ apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
   name: require-resource-limits
+  annotations:
+    # Runs after kyverno.yaml's Application (wave 0) goes Healthy, so
+    # this CRD exists by the time ArgoCD tries to apply it.
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   validationFailureAction: Audit
   background: true

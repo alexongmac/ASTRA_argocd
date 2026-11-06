@@ -3,6 +3,11 @@ kind: Application
 metadata:
   name: kyverno
   namespace: argocd
+  annotations:
+    # Must install (and register its CRDs) before kyverno-policies.yaml's
+    # ClusterPolicy can be applied - ArgoCD waits for this Application to
+    # go Healthy before starting the next wave.
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: astra
   source:
