@@ -43,3 +43,10 @@ jobs:
             -skip CustomResourceDefinition
             -kubernetes-version 1.31.0
             Applications bootstrap kyverno-policies
+
+      - name: snyk iac test
+        uses: snyk/actions/iac@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high Applications bootstrap kyverno-policies
