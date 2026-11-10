@@ -3,53 +3,61 @@ kind: Application
 metadata:
   name: kyverno
   namespace: argocd
-  annotations:
-    # Must install (and register its CRDs) before kyverno-policies.yaml's
-    # ClusterPolicy can be applied - ArgoCD waits for this Application to
-    # go Healthy before starting the next wave.
-    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: astra
-  source:
-    repoURL: https://kyverno.github.io/kyverno/
-    chart: kyverno
-    targetRevision: 3.9.1
-    helm:
-      releaseName: kyverno
-      valuesObject:
-        admissionController:
-          container:
+  # Multi-source: the ClusterPolicy in kyverno-policies/ is synced as part
+  # of this same Application, after the Helm chart, instead of as a
+  # separate sibling Application in Applications/. A sync-wave between two
+  # sibling Applications only orders their own Application objects - it
+  # doesn't wait for the Helm-installed CRDs inside this one to actually
+  # register, which let kyverno-policies.yaml race ahead and fail with
+  # "could not find kyverno.io/ClusterPolicy" before Kyverno was ready.
+  # Keeping both sources in one Application makes them part of the same
+  # sync operation, so the policy only applies once the chart (and its
+  # CRDs) are genuinely in place.
+  sources:
+    - repoURL: https://kyverno.github.io/kyverno/
+      chart: kyverno
+      targetRevision: 3.9.1
+      helm:
+        releaseName: kyverno
+        valuesObject:
+          admissionController:
+            container:
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi
+          backgroundController:
             resources:
               requests:
-                cpu: 50m
-                memory: 128Mi
+                cpu: 30m
+                memory: 64Mi
               limits:
-                cpu: 200m
-                memory: 256Mi
-        backgroundController:
-          resources:
-            requests:
-              cpu: 30m
-              memory: 64Mi
-            limits:
-              cpu: 150m
-              memory: 192Mi
-        cleanupController:
-          resources:
-            requests:
-              cpu: 20m
-              memory: 64Mi
-            limits:
-              cpu: 100m
-              memory: 128Mi
-        reportsController:
-          resources:
-            requests:
-              cpu: 30m
-              memory: 64Mi
-            limits:
-              cpu: 150m
-              memory: 192Mi
+                cpu: 150m
+                memory: 192Mi
+          cleanupController:
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+          reportsController:
+            resources:
+              requests:
+                cpu: 30m
+                memory: 64Mi
+              limits:
+                cpu: 150m
+                memory: 192Mi
+    - repoURL: https://github.com/alexongmac/ASTRA_argocd.git
+      targetRevision: develop
+      path: kyverno-policies
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno

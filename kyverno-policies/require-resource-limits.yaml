@@ -3,9 +3,14 @@ kind: ClusterPolicy
 metadata:
   name: require-resource-limits
   annotations:
-    # Applies after kyverno.yaml's Application (wave 0). Kyverno and its
-    # ClusterPolicy CRD must already exist, or ArgoCD's comparison fails
-    # on this resource and blocks the whole app-of-apps.
+    # Synced as a second source of the kyverno Application (see
+    # Applications/kyverno.yaml), so this applies within the same sync
+    # operation as the Helm chart, after it, instead of racing it as a
+    # separate sibling Application in Applications/ - the earlier version
+    # of this setup put it there and ArgoCD would sometimes sync this
+    # before Kyverno's CRDs were registered, since a sync-wave on a
+    # sibling Application only waits for that Application object to be
+    # Synced, not for its own nested chart resources to exist.
     argocd.argoproj.io/sync-wave: "1"
 spec:
   validationFailureAction: Audit
