@@ -5,6 +5,7 @@ on:
     paths:
       - "Applications/**"
       - "bootstrap/**"
+      - "kyverno-policies/**"
   push:
     branches:
       - main
@@ -12,6 +13,7 @@ on:
     paths:
       - "Applications/**"
       - "bootstrap/**"
+      - "kyverno-policies/**"
 
 jobs:
   lint:
@@ -22,12 +24,15 @@ jobs:
       - name: yamllint
         uses: ibiqlik/action-yamllint@v3
         with:
-          file_or_dir: Applications bootstrap
+          file_or_dir: Applications bootstrap kyverno-policies
           config_data: |
             extends: default
             rules:
               line-length: disable
               document-start: disable
+              braces: disable
+              comments: disable
+              comments-indentation: disable
 
       - name: kubeconform
         uses: docker://ghcr.io/yannh/kubeconform:latest
@@ -37,4 +42,4 @@ jobs:
             -ignore-missing-schemas
             -skip CustomResourceDefinition
             -kubernetes-version 1.31.0
-            Applications bootstrap
+            Applications bootstrap kyverno-policies
