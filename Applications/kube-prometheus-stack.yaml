@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
-    targetRevision: 92.17.0 # example only; pin the version currently deployed
+    targetRevision: 93.2.2 # example only; pin the version currently deployed
     helm:
       releaseName: kube-prometheus-stack
       valuesObject:
