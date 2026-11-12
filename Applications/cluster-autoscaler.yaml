@@ -33,6 +33,12 @@ spec:
         extraArgs:
           balance-similar-node-groups: true
           skip-nodes-with-system-pods: false
+          # Default true blocks scale-down on ANY node hosting a pod with an
+          # emptyDir volume - every node ends up pinned by something (Grafana
+          # cache, dex session state, Alertmanager data, etc.), so scale-down
+          # never happens at all. emptyDir loss on reschedule is acceptable
+          # for this cluster's workloads.
+          skip-nodes-with-local-storage: false
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
