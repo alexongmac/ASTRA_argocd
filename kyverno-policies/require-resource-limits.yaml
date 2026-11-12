@@ -28,9 +28,9 @@ spec:
           spec:
             containers:
               - resources:
-                requests:
-                  cpu: 50m
-                  memory: 128Mi
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"
                   limits:
-                    cpu: 200m
-                    memory: 256Mi
+                    cpu: "?*"
+                    memory: "?*"
