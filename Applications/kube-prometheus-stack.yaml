@@ -15,13 +15,15 @@ spec:
       releaseName: kube-prometheus-stack
       valuesObject:
         grafana:
+          # 256Mi OOMKilled Grafana 13.x on startup (search-index build etc.) -
+          # needs more headroom than steady-state usage suggests.
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 192Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 300m
+              memory: 512Mi
           sidecar:
             resources:
               requests:
