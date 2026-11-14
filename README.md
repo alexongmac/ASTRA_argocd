@@ -20,12 +20,11 @@ helm repo add grafana https://grafana.github.io/helm-charts
 helm repo add autoscaler https://kubernetes.github.io/autoscaler
 
 helm repo add kyverno https://kyverno.github.io/kyverno/
-
 helm repo add aqua https://aquasecurity.github.io/helm-charts/
 
 helm repo update
 
-### To check the helm app version for input to version
+### To check the helm app version for input to version.
 
 helm search repo eks/aws-load-balancer-controller --versions | head -20
 
@@ -45,4 +44,8 @@ helm search repo aqua/trivy-operator --versions | head -10
 
 kubectl --namespace monitoring get secrets kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
 
-### Wait for 5 mins before launching https://astra-prom.sctp-sandbox.com and https://astra-grafana.sctp-sandbox.com
+### Wait for 5 mins before launching as follows:
+
+https://astra-prom.sctp-sandbox.com
+https://astra-grafana.sctp-sandbox.com
+https://alertmanager.sctp-sandbox.com

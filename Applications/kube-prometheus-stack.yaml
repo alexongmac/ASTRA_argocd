@@ -67,6 +67,7 @@ spec:
                 memory: 1Gi
         alertmanager:
           alertmanagerSpec:
+            replicas: 2
             resources:
               requests:
                 cpu: 20m
