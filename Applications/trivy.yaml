@@ -25,6 +25,15 @@ spec:
               memory: 500Mi
         operator:
           ScanJobsConcurrencyLimit: 5
+        # top-level key: the operator Deployment's own container resources
+        # (distinct from trivy.resources above, which covers scan-job pods)
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: trivy-system
