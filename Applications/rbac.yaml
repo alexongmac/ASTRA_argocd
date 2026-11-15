@@ -56,6 +56,32 @@ rules:
   - apiGroups: ["argoproj.io"]
     resources: ["applications", "applicationsets"]
     verbs: ["get", "list", "watch", "update", "patch"]
+  # read-only: Trivy scan results (vulnerabilities, misconfig, secrets, SBOM)
+  # so developers can see findings against their own workloads.
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+      - vulnerabilityreports
+      - clustervulnerabilityreports
+      - configauditreports
+      - clusterconfigauditreports
+      - exposedsecretreports
+      - sbomreports
+      - clustersbomreports
+      - rbacassessmentreports
+      - clusterrbacassessmentreports
+      - infraassessmentreports
+      - clusterinfraassessmentreports
+      - clustercompliancereports
+    verbs: ["get", "list", "watch"]
+  # read-only: Kyverno policy definitions and their PolicyReport results, so
+  # developers can see why a resource failed a policy, without being able to
+  # change the policies themselves.
+  - apiGroups: ["kyverno.io"]
+    resources: ["clusterpolicies", "policies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["wgpolicyk8s.io"]
+    resources: ["policyreports", "clusterpolicyreports"]
+    verbs: ["get", "list", "watch"]
 
 ---
 # ClusterRoleBinding (not namespaced RoleBindings) since namespaces are
