@@ -47,11 +47,16 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
+  # kubectl top nodes/pods
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
   # ArgoCD Applications/ApplicationSets, so developers can view and sync
   # their own app's deployment status via kubectl or the ArgoCD UI/CLI.
   - apiGroups: ["argoproj.io"]
     resources: ["applications", "applicationsets"]
     verbs: ["get", "list", "watch", "update", "patch"]
+
 ---
 # ClusterRoleBinding (not namespaced RoleBindings) since namespaces are
 # cluster-scoped and developer is now granted cluster-wide.
@@ -84,7 +89,8 @@ rules:
     resources: ["pods/log", "pods/exec"]
     verbs: ["get", "create"]
   - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
+    resources:
+      ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
     verbs: ["patch", "update"]
   - apiGroups: [""]
     resources: ["pods"]
