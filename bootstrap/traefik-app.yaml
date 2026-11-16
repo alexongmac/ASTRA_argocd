@@ -37,7 +37,7 @@ spec:
             service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
             service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
             service.beta.kubernetes.io/aws-load-balancer-name: k8s-development-astra
-            service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Project=capstone-project-group-01,NukeProtection=Enabled
+            service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Project=capstone-project-group-01,Environment=development,Team=astra,NukeProtection=Enabled
         ingressClass:
           enabled: true
           isDefaultClass: true
