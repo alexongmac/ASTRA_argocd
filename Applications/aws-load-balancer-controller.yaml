@@ -10,13 +10,13 @@ spec:
   source:
     repoURL: https://aws.github.io/eks-charts
     chart: aws-load-balancer-controller
-    targetRevision: 3.6.1 # example only; pin the version you actually use
+    targetRevision: 3.6.1
     helm:
       releaseName: aws-load-balancer-controller
       valuesObject:
         clusterName: astra-eks-development-cluster
         region: us-east-1
-        vpcId: vpc-0123456789abcdef0 # replace with the real value of $VPC_ID
+        vpcId: vpc-0f5d335cffbbb2cb7
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
