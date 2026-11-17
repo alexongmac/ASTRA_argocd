@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: web-app-development
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
+spec:
+  project: astra
+  source:
+    # Raw manifests, not a Helm chart - this is our own app's image, not a
+    # published chart, so there's no chart repo to point at like the other
+    # Applications in this project.
+    repoURL: https://github.com/alexongmac/ASTRA_argocd.git
+    targetRevision: develop
+    path: web-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: web-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
