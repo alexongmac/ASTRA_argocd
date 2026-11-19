@@ -1,0 +1,56 @@
+name: Validate manifests
+
+on:
+  pull_request:
+    paths:
+      - "Applications/**"
+      - "bootstrap/**"
+      - "kyverno-policies/**"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "Applications/**"
+      - "bootstrap/**"
+      - "kyverno-policies/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: Applications bootstrap kyverno-policies
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+              braces: disable
+              comments: disable
+              comments-indentation: disable
+
+      - name: kubeconform
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: >-
+            -summary
+            -ignore-missing-schemas
+            -skip CustomResourceDefinition
+            -kubernetes-version 1.31.0
+            Applications bootstrap kyverno-policies
+
+      - name: snyk iac test
+        uses: snyk/actions/iac@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          # threshold=critical: sre/developer ClusterRoles intentionally use
+          # wildcard resources/verbs for cluster-wide access - Snyk flags
+          # that pattern as High regardless of intent, so High would fail
+          # CI on every push without ever catching a new, unintended issue.
+          args: --severity-threshold=critical Applications bootstrap kyverno-policies

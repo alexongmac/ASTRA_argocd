@@ -6,10 +6,11 @@
 # directly (11-teamaccess.tf), which is equivalent to Kubernetes' built-in
 # cluster-admin ClusterRole, so no custom role is defined for it here.
 
-# developer: manage workloads in the default namespace, including what a
-# `helm install/upgrade` into that namespace needs to create (secrets,
-# serviceaccounts, pvcs, and namespace-scoped RBAC that charts ship for
-# their own pods) - no access to ResourceQuotas or cluster-scoped RBAC.
+# developer: manage workloads cluster-wide, including what a
+# `helm install/upgrade` needs to create (secrets, serviceaccounts, pvcs,
+# and namespace-scoped RBAC that charts ship for their own pods), plus
+# creating namespaces themselves - no access to ResourceQuotas or
+# cluster-scoped RBAC beyond roles/rolebindings.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -38,27 +39,57 @@ rules:
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: eks-developers-binding
-  namespace: default
-subjects:
-  - kind: Group
-    name: eks-developers
-    apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: developer
-  apiGroup: rbac.authorization.k8s.io
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["create", "get", "list", "watch"]
+  # read-only: developers can check node capacity/scheduling but shouldn't
+  # cordon/drain/delete nodes themselves.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  # kubectl top nodes/pods
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
+  # ArgoCD Applications/ApplicationSets, so developers can view and sync
+  # their own app's deployment status via kubectl or the ArgoCD UI/CLI.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "applicationsets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  # read-only: Trivy scan results (vulnerabilities, misconfig, secrets, SBOM)
+  # so developers can see findings against their own workloads.
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+      - vulnerabilityreports
+      - clustervulnerabilityreports
+      - configauditreports
+      - clusterconfigauditreports
+      - exposedsecretreports
+      - sbomreports
+      - clustersbomreports
+      - rbacassessmentreports
+      - clusterrbacassessmentreports
+      - infraassessmentreports
+      - clusterinfraassessmentreports
+      - clustercompliancereports
+    verbs: ["get", "list", "watch"]
+  # read-only: Kyverno policy definitions and their PolicyReport results, so
+  # developers can see why a resource failed a policy, without being able to
+  # change the policies themselves.
+  - apiGroups: ["kyverno.io"]
+    resources: ["clusterpolicies", "policies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["wgpolicyk8s.io"]
+    resources: ["policyreports", "clusterpolicyreports"]
+    verbs: ["get", "list", "watch"]
 
 ---
+# ClusterRoleBinding (not namespaced RoleBindings) since namespaces are
+# cluster-scoped and developer is now granted cluster-wide.
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: eks-developers-binding
-  namespace: argocd
 subjects:
   - kind: Group
     name: eks-developers
@@ -84,7 +115,8 @@ rules:
     resources: ["pods/log", "pods/exec"]
     verbs: ["get", "create"]
   - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
+    resources:
+      ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
     verbs: ["patch", "update"]
   - apiGroups: [""]
     resources: ["pods"]

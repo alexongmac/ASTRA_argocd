@@ -3,12 +3,14 @@ kind: Application
 metadata:
   name: trivy-operator
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
     repoURL: https://aquasecurity.github.io/helm-charts/
     chart: trivy-operator
-    targetRevision: 0.37.0
+    targetRevision: 0.38.1
     helm:
       releaseName: trivy-operator
       valuesObject:
@@ -23,6 +25,15 @@ spec:
               memory: 500Mi
         operator:
           ScanJobsConcurrencyLimit: 5
+        # top-level key: the operator Deployment's own container resources
+        # (distinct from trivy.resources above, which covers scan-job pods)
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: trivy-system

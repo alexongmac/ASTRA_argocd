@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: astra-web-app
+  namespace: web-app
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: k8s-development-astra-web
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    # The ACM certificate is discovered automatically from the host below.
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-1:255945442255:regional/webacl/astra-eks-development-web-app/8b11010e-21d1-4258-b3c9-db899fb47f29
+    alb.ingress.kubernetes.io/tags: Project=capstone-project-group-01,Environment=development,Team=astra,NukeProtection=Enabled
+spec:
+  ingressClassName: alb
+  rules:
+    - host: astra-app.sctp-sandbox.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: astra-web-app
+                port:
+                  number: 80

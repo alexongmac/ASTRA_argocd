@@ -3,16 +3,27 @@ kind: Application
 metadata:
   name: kube-prometheus-stack
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
-    targetRevision: 92.17.0 # example only; pin the version currently deployed
+    targetRevision: 93.2.2 # example only; pin the version currently deployed
     helm:
       releaseName: kube-prometheus-stack
       valuesObject:
         grafana:
+          # 256Mi OOMKilled Grafana 13.x on startup (search-index build etc.) -
+          # needs more headroom than steady-state usage suggests.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              cpu: 300m
+              memory: 512Mi
           sidecar:
             resources:
               requests:
@@ -27,6 +38,59 @@ spec:
               access: proxy
               url: http://loki.monitoring.svc.cluster.local:3100
               isDefault: false
+        prometheusOperator:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          # config-reloader sidecar the operator injects into both the
+          # Prometheus and Alertmanager pods it manages.
+          prometheusConfigReloader:
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 64Mi
+        prometheus:
+          prometheusSpec:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 1Gi
+        alertmanager:
+          alertmanagerSpec:
+            replicas: 2
+            resources:
+              requests:
+                cpu: 20m
+                memory: 200Mi
+              limits:
+                cpu: 100m
+                memory: 256Mi
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
         # --reuse-values: add every other value from your existing release here
   destination:
     server: https://kubernetes.default.svc

@@ -1,17 +1,25 @@
+# Lives in bootstrap/ (applied directly via kubectl), NOT in Applications/
+# synced by astra-root. The traefik ingresses in Applications/ reference
+# ingressClassName: traefik, and the AWS LB controller's admission webhook
+# rejects an ingress whose IngressClass doesn't exist yet - which happens
+# during astra-root's server-side-diff comparison, before any sync runs. So
+# Traefik (and its IngressClass) must be installed independently and first,
+# or it would deadlock its own ingresses' comparison inside the same app.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: traefik
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
     repoURL: https://traefik.github.io/charts
     chart: traefik
-    targetRevision: 42.2.0
+    targetRevision: 42.3.0
     helm:
       releaseName: traefik
-      timeout: 60s
       valuesObject:
         deployment:
           replicas: 2
@@ -28,6 +36,8 @@ spec:
             service.beta.kubernetes.io/aws-load-balancer-type: nlb
             service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
             service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+            service.beta.kubernetes.io/aws-load-balancer-name: k8s-development-astra
+            service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Project=capstone-project-group-01,Environment=development,Team=astra,NukeProtection=Enabled
         ingressClass:
           enabled: true
           isDefaultClass: true

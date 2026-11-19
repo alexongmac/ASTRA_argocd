@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://kubernetes.github.io/autoscaler
     chart: cluster-autoscaler
-    targetRevision: 9.59.0 # example only; pin the version you actually use
+    targetRevision: 9.59.0
     helm:
       releaseName: cluster-autoscaler
       valuesObject:
@@ -17,7 +17,11 @@ spec:
         awsRegion: us-east-1
         rbac:
           serviceAccount:
-            create: false
+            # Must be true - nothing else creates this SA. The Terraform
+            # aws_eks_pod_identity_association binds IAM to it by name but
+            # doesn't create it; EKS Pod Identity needs no SA annotation
+            # (unlike IRSA), so the chart-created SA works as-is.
+            create: true
             name: cluster-autoscaler
         resources:
           requests:
@@ -29,6 +33,12 @@ spec:
         extraArgs:
           balance-similar-node-groups: true
           skip-nodes-with-system-pods: false
+          # Default true blocks scale-down on ANY node hosting a pod with an
+          # emptyDir volume - every node ends up pinned by something (Grafana
+          # cache, dex session state, Alertmanager data, etc.), so scale-down
+          # never happens at all. emptyDir loss on reschedule is acceptable
+          # for this cluster's workloads.
+          skip-nodes-with-local-storage: false
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
@@ -37,7 +47,7 @@ spec:
       prune: true
       selfHeal: true
     retry:
-      limit: 5
+      limit: 4
       backoff:
         duration: 10s
         factor: 2

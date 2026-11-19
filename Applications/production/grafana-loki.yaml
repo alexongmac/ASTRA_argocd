@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: loki
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
@@ -18,7 +20,7 @@ spec:
           create: true
           name: loki
           annotations:
-            eks.amazonaws.com/role-arn: arn:aws:iam::255945442255:role/astra-eks-development-loki-role
+            eks.amazonaws.com/role-arn: arn:aws:iam::255945442255:role/astra-eks-production-loki-role
 
         loki:
           auth_enabled: false
@@ -36,9 +38,9 @@ spec:
           storage:
             type: s3
             bucketNames:
-              chunks: astra-eks-development-loki-logs
-              ruler: astra-eks-development-loki-logs
-              admin: astra-eks-development-loki-logs
+              chunks: astra-eks-production-loki-logs
+              ruler: astra-eks-production-loki-logs
+              admin: astra-eks-production-loki-logs
             s3:
               region: us-east-1
               s3ForcePathStyle: false

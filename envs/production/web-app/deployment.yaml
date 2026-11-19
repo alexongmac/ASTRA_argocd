@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: astra-web-app
+  namespace: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: astra-web-app
+  template:
+    metadata:
+      labels:
+        app: astra-web-app
+    spec:
+      serviceAccountName: astra-web-app
+      containers:
+        - name: astra-web-app
+          # Replaced by web-app-deploy.yml on every push to app/**
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-production-app:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: astra-web-app
+                  key: DATABASE_URL
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: astra-web-app
+                  key: AUTH_SECRET
+            - name: AUTH_TRUST_HOST
+              value: "true"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+---
+# The SQS consumer runs from the same image under a different command, so it
+# always ships in lockstep with the web tier.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: astra-web-app-worker
+  namespace: web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: astra-web-app-worker
+  template:
+    metadata:
+      labels:
+        app: astra-web-app-worker
+    spec:
+      serviceAccountName: astra-web-app
+      containers:
+        - name: worker
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-production-app:latest
+          command: ["node", "dist/worker.cjs"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: astra-web-app
+                  key: DATABASE_URL
+            - name: SQS_QUEUE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: astra-web-app
+                  key: SQS_QUEUE_URL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
