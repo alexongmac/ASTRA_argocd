@@ -16,7 +16,7 @@ spec:
       valuesObject:
         clusterName: astra-eks-production-cluster
         region: us-east-1
-        vpcId: vpc-0f5d335cffbbb2cb7
+        vpcId: vpc-0ef87ad287d94330f
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
