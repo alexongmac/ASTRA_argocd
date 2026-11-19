@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: astra-web-app
+  namespace: web-app
+spec:
+  selector:
+    app: astra-web-app
+  ports:
+    - port: 80
+      targetPort: 3000

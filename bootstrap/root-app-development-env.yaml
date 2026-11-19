@@ -1,22 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: web-app-development
+  name: astra-root-development-env
   namespace: argocd
   annotations:
+    # Client-side diff fails on the child Application CRDs with
+    # ".status.observedGeneration: field not declared in schema", blocking
+    # comparison entirely. Server-side diff offloads the merge to the API
+    # server, which has the correct schema for the field.
     argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: astra
   source:
-    # Raw manifests, not a Helm chart - this is our own app's image, not a
-    # published chart, so there's no chart repo to point at like the other
-    # Applications in this project.
     repoURL: https://github.com/alexongmac/ASTRA_argocd.git
     targetRevision: develop
-    path: web-app
+    path: Applications/development
+    directory:
+      recurse: false
   destination:
     server: https://kubernetes.default.svc
-    namespace: web-app
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
