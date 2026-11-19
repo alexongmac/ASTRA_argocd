@@ -16,7 +16,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: astra-app-production.sctp-sandbox.com
+    - host: astra-app-prod.sctp-sandbox.com
       http:
         paths:
           - path: /
