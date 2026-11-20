@@ -1,33 +1,36 @@
-# argocd-cm is deliberately NOT declared here. Do not add it back.
+# DO NOT remove argocd-cm from this file.
 #
-# This file holds only argocd-rbac-cm, which nothing else templates.
+# It looks wrong: the ArgoCD Helm chart templates argocd-cm itself with ~19
+# keys (resource.exclusions, every
+# resource.customizations.ignoreResourceUpdates.*, application.instanceLabelKey,
+# exec.enabled, the timeout.* set), while this declares only one. Two owners
+# for one object, with git holding a strict subset.
 #
-# History, because both obvious options were tried and both failed:
+# But deleting it from git is far worse than the mismatch. The parent
+# astra-root-ENV app syncs with prune: true, so removing this block makes
+# ArgoCD DELETE the whole ConfigMap - including the chart's 18 other keys.
+# That was tried on development on 2026-11-20 and took the cluster down:
+# the application-controller logs "configmap argocd-cm not found", loses its
+# comparison settings, and every Application in the cluster goes
+# Sync=Unknown / Health=Unknown with "Skipping auto-sync: application status
+# is Unknown". GitOps stops entirely until the ConfigMap is restored by hand
+# from `helm template argo-cd --version <chart>`.
 #
-#   1. Declaring a one-key argocd-cm here while the Helm chart templated the
-#      same object with ~19 keys. ArgoCD applies git as the whole object, so
-#      it reduced the live ConfigMap to that single key and discarded
-#      resource.exclusions and every
-#      resource.customizations.ignoreResourceUpdates.* with it. The cluster
-#      stayed up but the application-controller then watched Kyverno reports,
-#      Leases and EndpointSlices cluster-wide. (development, 2026-11-21)
-#
-#   2. Deleting it from git while nothing else owned it. The parent
-#      astra-root-ENV app syncs with prune: true, so ArgoCD deleted the
-#      ConfigMap outright. The controller logged "configmap argocd-cm not
-#      found", lost its comparison settings, and all 11 Applications went
-#      Sync=Unknown / Health=Unknown with "Skipping auto-sync: application
-#      status is Unknown". GitOps stopped until it was restored by hand.
-#      (development, 2026-11-20)
-#
-# What works is a single owner that declares the COMPLETE object. That owner
-# is bootstrap/argocd-install/, where upstream install.yaml supplies
-# resource.exclusions and the ignoreResourceUpdates blocks and
-# cm-patch.yaml adds accounts.developer on top. Add new argocd-cm keys
-# there, not here.
-#
-# The policy.csv below still grants role:developer; the account it names is
-# created by that cm-patch.yaml.
+# The subset is safe in practice because ArgoCD applies server-side: it only
+# claims the field it declares here and leaves the chart's keys alone. Keep
+# this block, and if you need another key, ADD it here rather than removing
+# the resource.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  # The local account that policy.csv below grants role:developer to.
+  accounts.developer: apiKey, login
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
