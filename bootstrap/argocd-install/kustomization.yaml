@@ -1,0 +1,61 @@
+# ArgoCD itself, installed with kubectl instead of Terraform.
+#
+# Replaces helm_release.argocd in the ASTRA repo's 23-argocd.tf. Terraform is
+# a poor fit for installing the thing that then manages the cluster:
+#
+#   - `terraform plan` needed a reachable, healthy cluster, so it could not
+#     run while the cluster was broken - exactly when you need it. A
+#     cert-manager CA rotation once failed the apply outright with an x509
+#     webhook error, and the production node-group outage blocked it too.
+#   - Helm does not upgrade CRDs, so the v3 CRDs had to be applied by hand
+#     anyway (see the old 23-argocd.tf comment). Half the install was already
+#     outside Terraform.
+#   - helm_release pins chart 10.18.2 -> app v3.6.2, an indirection that has
+#     to be looked up. Here the app version is the thing you read.
+#
+# Upstream install.yaml has no values mechanism, so the resource limits that
+# used to live in 23-argocd.tf's locals are applied as a patch below. They are
+# required: Kyverno's require-resource-limits policy flags every container
+# that has none, and upstream ships with no resources set at all.
+#
+# Apply (--server-side is REQUIRED, not optional):
+#   kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl apply --server-side -k bootstrap/argocd-install/
+#   kubectl -n argocd rollout status deploy/argocd-server
+#
+# Without --server-side the apply fails with:
+#   The CustomResourceDefinition "applicationsets.argoproj.io" is invalid:
+#   metadata.annotations: Too long: may not be more than 262144 bytes
+# Client-side apply stores the entire manifest in a
+# kubectl.kubernetes.io/last-applied-configuration annotation, and the
+# ApplicationSet CRD alone is larger than the 256KB annotation limit.
+# Server-side apply tracks ownership in managedFields instead, so there is no
+# such limit. Verified: 0 errors with the flag, 1 without.
+#
+# Upgrading: bump the ref in the resources URL below AND the version comment,
+# then re-apply. Unlike Helm, this upgrades the CRDs too, because they are
+# part of the same manifest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+resources:
+  # Pinned to an exact tag, never "stable" - that floating ref would upgrade
+  # ArgoCD underneath you on the next apply. Matches the app version the Helm
+  # chart 10.18.2 used to install, so this is a like-for-like replacement.
+  #
+  # v3, not v2: v2.14's bundled OpenAPI schema predates Kubernetes 1.37 and
+  # does not know Deployment's status.terminatingReplicas, so ArgoCD's
+  # structured-merge diff failed with "field not declared in schema" and left
+  # the traefik Application permanently Unknown, unable to detect drift or
+  # self-heal.
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.2/manifests/install.yaml
+
+patches:
+  - path: resources-patch.yaml
+  - path: cmd-params-patch.yaml
+  # Adds accounts.developer to the argocd-cm that upstream ships. Keep this
+  # as the only writer of that ConfigMap - see the note in cm-patch.yaml
+  # about what happened when Applications/ declared it instead.
+  - path: cm-patch.yaml

@@ -1,0 +1,30 @@
+# accounts.developer, which used to be declared in
+# Applications/argocd-rbac.yaml and is now owned here instead.
+#
+# WHY IT MOVED. Upstream install.yaml ships argocd-cm with 9 keys of its own
+# (resource.exclusions and the ignoreResourceUpdates blocks) but NOT this one,
+# so it has to be added back by patch. Declaring it in Applications/ instead
+# does not work: that path makes ArgoCD the field owner of argocd-cm, and
+# because ArgoCD applies git as the whole object, it reduced the live
+# ConfigMap to this single key and discarded resource.exclusions with it -
+# observed on development 2026-11-21, where the controller then watched
+# Kyverno reports, Leases and EndpointSlices cluster-wide.
+#
+# Owning it here keeps one writer for the whole object: upstream's keys plus
+# this one, applied together. Applications/argocd-rbac.yaml must therefore
+# NOT declare argocd-cm - it keeps only argocd-rbac-cm, which upstream does
+# not template.
+#
+# This is a strategic-merge patch, so it ADDS this key to upstream's data map
+# rather than replacing it. Verify after applying:
+#   kubectl -n argocd get cm argocd-cm -o json | jq '.data | keys | length'
+# Expect 10, not 1.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  # Paired with the role:developer grant in
+  # Applications/argocd-rbac.yaml's policy.csv. Without this key that grant
+  # is inert, because the account it refers to does not exist.
+  accounts.developer: apiKey, login
