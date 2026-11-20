@@ -1,27 +1,36 @@
-# Only argocd-rbac-cm lives here, deliberately.
+# DO NOT remove argocd-cm from this file.
 #
-# This file used to also declare a one-key argocd-cm holding
-# accounts.developer. That was removed: the ArgoCD Helm chart templates
-# argocd-cm itself with ~19 keys (resource.exclusions, every
+# It looks wrong: the ArgoCD Helm chart templates argocd-cm itself with ~19
+# keys (resource.exclusions, every
 # resource.customizations.ignoreResourceUpdates.*, application.instanceLabelKey,
-# exec.enabled, the timeout.* set), so git and the chart both claimed the same
-# object. Since the parent astra-root-ENV app syncs with prune: true, only
-# ArgoCD's server-side-apply field ownership was keeping the chart's other
-# keys alive - a force-sync or --replace would have pruned
-# resource.exclusions and the ignoreResourceUpdates blocks, making the
-# application-controller watch Kyverno reports, Leases and EndpointSlices
-# cluster-wide.
+# exec.enabled, the timeout.* set), while this declares only one. Two owners
+# for one object, with git holding a strict subset.
 #
-# Consequence to know about: policy.csv below grants role:developer to an
-# account named "developer" that nothing currently creates, so that grant is
-# inert until the account exists. Add it with a one-off
-#   kubectl patch cm argocd-cm -n argocd \
-#     -p '{"data":{"accounts.developer":"apiKey, login"}}'
-# (a patch merges, so it leaves the chart's other keys intact) - not by
-# declaring argocd-cm here again.
+# But deleting it from git is far worse than the mismatch. The parent
+# astra-root-ENV app syncs with prune: true, so removing this block makes
+# ArgoCD DELETE the whole ConfigMap - including the chart's 18 other keys.
+# That was tried on development on 2026-11-20 and took the cluster down:
+# the application-controller logs "configmap argocd-cm not found", loses its
+# comparison settings, and every Application in the cluster goes
+# Sync=Unknown / Health=Unknown with "Skipping auto-sync: application status
+# is Unknown". GitOps stops entirely until the ConfigMap is restored by hand
+# from `helm template argo-cd --version <chart>`.
 #
-# The chart does NOT template policy.csv, so argocd-rbac-cm has a single
-# owner and is safe to declare here.
+# The subset is safe in practice because ArgoCD applies server-side: it only
+# claims the field it declares here and leaves the chart's keys alone. Keep
+# this block, and if you need another key, ADD it here rather than removing
+# the resource.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  # The local account that policy.csv below grants role:developer to.
+  accounts.developer: apiKey, login
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
