@@ -17,7 +17,7 @@ spec:
       containers:
         - name: astra-web-app
           # Replaced by web-app-deploy.yml on every push to app/**
-          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:db0d18404829b3f3d657e4e2748fa4cd058a3313
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:bc2858e69ead7d9c6350e6be2de42e1300145c5b
           ports:
             - containerPort: 3000
           env:
@@ -33,6 +33,13 @@ spec:
                   key: AUTH_SECRET
             - name: AUTH_TRUST_HOST
               value: "true"
+            # AUTH_TRUST_HOST alone makes NextAuth derive redirect URLs from the
+            # request's host headers, but the ALB forwards to the pod without
+            # X-Forwarded-Host, so it fell back to the container's bind address
+            # and sign-in redirected the browser to https://0.0.0.0:3000/login.
+            # Stating the public URL explicitly is what fixes that.
+            - name: AUTH_URL
+              value: "https://astra-app.sctp-sandbox.com"
           resources:
             requests:
               cpu: 100m
@@ -71,7 +78,7 @@ spec:
       serviceAccountName: astra-web-app
       containers:
         - name: worker
-          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:db0d18404829b3f3d657e4e2748fa4cd058a3313
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:bc2858e69ead7d9c6350e6be2de42e1300145c5b
           command: ["node", "dist/worker.cjs"]
           env:
             - name: DATABASE_URL
