@@ -2,6 +2,11 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
+  # See Applications/kube-prometheus-stack.yaml: a declared label stops
+  # ArgoCD's stripped tracking label leaving "labels: null" and reporting
+  # false drift.
+  labels:
+    app.kubernetes.io/part-of: astra
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory

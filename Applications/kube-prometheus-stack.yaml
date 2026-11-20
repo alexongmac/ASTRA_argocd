@@ -3,6 +3,15 @@ kind: Application
 metadata:
   name: kube-prometheus-stack
   namespace: argocd
+  # Without a label declared here, this resource's only label is the
+  # argocd.argoproj.io/instance tracking label ArgoCD adds itself (the key
+  # named by application.instanceLabelKey in argocd-cm). ArgoCD strips that
+  # label from the desired manifest before diffing, which left an empty map
+  # serialising as "labels: null" - never equal to the live object's absent
+  # key. The parent astra-root-ENV app therefore reported this permanently
+  # OutOfSync even though a sync succeeded and changed nothing.
+  labels:
+    app.kubernetes.io/part-of: astra
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:

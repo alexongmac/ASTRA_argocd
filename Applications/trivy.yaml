@@ -3,6 +3,10 @@ kind: Application
 metadata:
   name: trivy-operator
   namespace: argocd
+  # See kube-prometheus-stack.yaml: a declared label stops ArgoCD's stripped
+  # tracking label leaving "labels: null" and reporting false drift.
+  labels:
+    app.kubernetes.io/part-of: astra
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:

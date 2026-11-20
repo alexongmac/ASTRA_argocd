@@ -1,13 +1,27 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: argocd-cm
-  namespace: argocd
-  labels:
-    app.kubernetes.io/part-of: argocd
-data:
-  accounts.developer: apiKey, login
----
+# Only argocd-rbac-cm lives here, deliberately.
+#
+# This file used to also declare a one-key argocd-cm holding
+# accounts.developer. That was removed: the ArgoCD Helm chart templates
+# argocd-cm itself with ~19 keys (resource.exclusions, every
+# resource.customizations.ignoreResourceUpdates.*, application.instanceLabelKey,
+# exec.enabled, the timeout.* set), so git and the chart both claimed the same
+# object. Since the parent astra-root-ENV app syncs with prune: true, only
+# ArgoCD's server-side-apply field ownership was keeping the chart's other
+# keys alive - a force-sync or --replace would have pruned
+# resource.exclusions and the ignoreResourceUpdates blocks, making the
+# application-controller watch Kyverno reports, Leases and EndpointSlices
+# cluster-wide.
+#
+# Consequence to know about: policy.csv below grants role:developer to an
+# account named "developer" that nothing currently creates, so that grant is
+# inert until the account exists. Add it with a one-off
+#   kubectl patch cm argocd-cm -n argocd \
+#     -p '{"data":{"accounts.developer":"apiKey, login"}}'
+# (a patch merges, so it leaves the chart's other keys intact) - not by
+# declaring argocd-cm here again.
+#
+# The chart does NOT template policy.csv, so argocd-rbac-cm has a single
+# owner and is safe to declare here.
 apiVersion: v1
 kind: ConfigMap
 metadata:
