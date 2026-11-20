@@ -1,0 +1,4 @@
+# Written by the "kustomize build" step in .github/workflows/validate.yaml so
+# the kubeconform step after it (which runs in a container that mounts only
+# the workspace) can read the rendered manifests. Build output, not source.
+argocd-built.yaml

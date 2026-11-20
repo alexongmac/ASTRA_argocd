@@ -34,6 +34,14 @@ jobs:
               comments: disable
               comments-indentation: disable
 
+      # bootstrap/argocd-install/ is excluded: its files are Kustomize patch
+      # fragments, not complete resources. A strategic-merge patch names the
+      # workload and container and lists only the fields to change, so it has
+      # no spec.selector (or serviceName) - the merge takes those from
+      # upstream install.yaml. kubeconform validates each file standalone, so
+      # it reported all 7 as "missing property 'selector'". The patches are
+      # validated as part of the built output in the next step instead, which
+      # is what actually gets applied.
       - name: kubeconform
         uses: docker://ghcr.io/yannh/kubeconform:latest
         with:
@@ -41,8 +49,40 @@ jobs:
             -summary
             -ignore-missing-schemas
             -skip CustomResourceDefinition
+            -ignore-filename-pattern 'bootstrap/argocd-install/.*'
             -kubernetes-version 1.31.0
             Applications bootstrap kyverno-policies
+
+      # Catches what excluding the patches above would otherwise miss: that
+      # the kustomization still builds at all (a bad patch path, a malformed
+      # patch, or an unreachable upstream ref all fail here), and produces the
+      # file the next step validates.
+      #
+      # What this canNOT catch: a patch whose container name does not match
+      # upstream. Kustomize happily merges it as an ADDITIONAL container, so
+      # the built YAML still contains upstream's image and the patch's limits,
+      # just spread over two containers - it looks fine to any text or schema
+      # check. Only the API server rejects it, with
+      #   spec.template.spec.containers[0].image: Required value
+      # which is how it failed mid-migration on 2026-11-21. That needs a live
+      # cluster, so it belongs in the README's pre-apply step, not here:
+      #   kubectl apply --server-side --dry-run=server -k bootstrap/argocd-install/
+      - name: kustomize build
+        run: |
+          # Written into the workspace, not /tmp: the kubeconform step below
+          # runs in a container that only mounts the workspace.
+          kubectl kustomize bootstrap/argocd-install/ > argocd-built.yaml
+          grep -c '^kind:' argocd-built.yaml | sed 's/^/resources built: /'
+
+      - name: kubeconform the built ArgoCD manifests
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: >-
+            -summary
+            -ignore-missing-schemas
+            -skip CustomResourceDefinition
+            -kubernetes-version 1.31.0
+            argocd-built.yaml
 
       - name: snyk iac test
         uses: snyk/actions/iac@master
