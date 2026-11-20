@@ -17,7 +17,7 @@ spec:
       containers:
         - name: astra-web-app
           # Replaced by web-app-deploy.yml on every push to app/**
-          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:dce60552eafcae7e07ececca3e00bc861d4656f7
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:bc2858e69ead7d9c6350e6be2de42e1300145c5b
           ports:
             - containerPort: 3000
           env:
@@ -71,7 +71,7 @@ spec:
       serviceAccountName: astra-web-app
       containers:
         - name: worker
-          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:dce60552eafcae7e07ececca3e00bc861d4656f7
+          image: 255945442255.dkr.ecr.us-east-1.amazonaws.com/astra-eks-development-app:bc2858e69ead7d9c6350e6be2de42e1300145c5b
           command: ["node", "dist/worker.cjs"]
           env:
             - name: DATABASE_URL
