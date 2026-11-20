@@ -10,11 +10,33 @@
 # args, env, volumes, probes - is taken from upstream untouched. That is why
 # these few lines can safely modify a 37,000-line input.
 #
-# NOTE the container names are the short forms (repo-server, server,
-# application-controller), NOT the workload names (argocd-repo-server, ...).
-# A patch whose container name does not match is silently ignored by
-# Kustomize's merge, so verify with:
-#   kubectl kustomize bootstrap/argocd-install/ | grep -A4 'resources:'
+# CONTAINER NAMES MUST MATCH UPSTREAM, NOT THE HELM CHART. They differ, and
+# this is the one thing to get right here:
+#
+#   workload                          upstream container   Helm chart's
+#   argocd-server                      argocd-server         server
+#   argocd-repo-server                 argocd-repo-server    repo-server
+#   argocd-application-controller      argocd-application-controller
+#                                                            application-controller
+#   argocd-dex-server                  dex                   dex-server
+#   argocd-applicationset-controller   argocd-applicationset-controller
+#                                                            applicationset-controller
+#   argocd-notifications-controller    argocd-notifications-controller
+#                                                            notifications-controller
+#   argocd-redis                       redis                 redis
+#
+# Note dex is "dex", not "argocd-dex-server" - it does not follow the pattern.
+#
+# Getting this wrong does NOT silently no-op. The merge treats the mismatched
+# name as a NEW container with no image, and the apply is rejected with
+#   spec.template.spec.containers[0].image: Required value
+# for every affected workload - which is how it failed on the first real
+# migration attempt (2026-11-21), after the names had been read off the
+# running Helm-installed cluster instead of upstream install.yaml.
+#
+# Verify every workload keeps BOTH an image and limits before applying:
+#   kubectl kustomize bootstrap/argocd-install/ \
+#     | grep -E '^  name: argocd-|image:|memory:'
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -27,7 +49,7 @@ spec:
         # The controller tracks live state for every Application across the
         # whole cluster (11 apps here) - it OOMKilled at 512Mi, so it gets a
         # larger ceiling than the shared default below.
-        - name: application-controller
+        - name: argocd-application-controller
           resources:
             requests:
               cpu: 250m
@@ -44,7 +66,7 @@ spec:
   template:
     spec:
       containers:
-        - name: server
+        - name: argocd-server
           resources:
             requests:
               cpu: 100m
@@ -61,7 +83,7 @@ spec:
   template:
     spec:
       containers:
-        - name: repo-server
+        - name: argocd-repo-server
           resources:
             requests:
               cpu: 100m
@@ -78,7 +100,7 @@ spec:
   template:
     spec:
       containers:
-        - name: dex-server
+        - name: dex
           resources:
             requests:
               cpu: 100m
@@ -112,7 +134,7 @@ spec:
   template:
     spec:
       containers:
-        - name: applicationset-controller
+        - name: argocd-applicationset-controller
           resources:
             requests:
               cpu: 100m
@@ -129,7 +151,7 @@ spec:
   template:
     spec:
       containers:
-        - name: notifications-controller
+        - name: argocd-notifications-controller
           resources:
             requests:
               cpu: 100m
