@@ -33,6 +33,13 @@ spec:
                   key: AUTH_SECRET
             - name: AUTH_TRUST_HOST
               value: "true"
+            # AUTH_TRUST_HOST alone makes NextAuth derive redirect URLs from the
+            # request's host headers, but the ALB forwards to the pod without
+            # X-Forwarded-Host, so it fell back to the container's bind address
+            # and sign-in redirected the browser to https://0.0.0.0:3000/login.
+            # Stating the public URL explicitly is what fixes that.
+            - name: AUTH_URL
+              value: "https://astra-app-prod.sctp-sandbox.com"
           resources:
             requests:
               cpu: 100m
