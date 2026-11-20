@@ -1,0 +1,33 @@
+# accounts.developer for the argocd-cm that upstream install.yaml ships.
+#
+# Upstream ships argocd-cm with 9 keys of its own (resource.exclusions and the
+# ignoreResourceUpdates blocks) but NOT this one, so it is added back here.
+#
+# !! DO NOT pair this with removing argocd-cm from
+# !! Applications/argocd-rbac.yaml until the workloads are genuinely migrated
+# !! off the Helm release.
+#
+# That was tried on development 2026-11-21 and failed. astra-root-ENV syncs
+# with prune: true, so the moment git stopped declaring argocd-cm ArgoCD
+# deleted the whole ConfigMap - the application-controller lost its
+# comparison settings and Applications went Sync=Unknown until it was
+# restored by hand. Removing it from git is only safe once this kustomization
+# is the live installer, and that cannot be done in place: see
+# kustomization.yaml's note about the immutable spec.selector.
+#
+# Until then argocd-cm has two writers - git's single key, plus whatever
+# installed ArgoCD. That is tolerable. Deleting it from git is not.
+#
+# This is a strategic-merge patch, so it ADDS this key to upstream's data map
+# rather than replacing it. Verify after applying:
+#   kubectl -n argocd get cm argocd-cm -o json | jq '.data | keys | length'
+# Expect 10, not 1.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  # Paired with the role:developer grant in
+  # Applications/argocd-rbac.yaml's policy.csv. Without this key that grant
+  # is inert, because the account it refers to does not exist.
+  accounts.developer: apiKey, login

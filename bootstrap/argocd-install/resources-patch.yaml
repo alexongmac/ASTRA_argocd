@@ -1,0 +1,139 @@
+# Resource requests/limits for every ArgoCD component.
+#
+# Ported verbatim from the ASTRA repo's 23-argocd.tf locals
+# (argocd_default_resources / argocd_controller_resources), which this
+# replaces. Upstream install.yaml sets no resources at all, and Kyverno's
+# require-resource-limits ClusterPolicy flags every such container.
+#
+# These are strategic-merge patches: each document names the workload and the
+# container, and lists ONLY the fields to change. Everything else - image,
+# args, env, volumes, probes - is taken from upstream untouched. That is why
+# these few lines can safely modify a 37,000-line input.
+#
+# NOTE the container names are the short forms (repo-server, server,
+# application-controller), NOT the workload names (argocd-repo-server, ...).
+# A patch whose container name does not match is silently ignored by
+# Kustomize's merge, so verify with:
+#   kubectl kustomize bootstrap/argocd-install/ | grep -A4 'resources:'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: argocd-application-controller
+spec:
+  template:
+    spec:
+      containers:
+        # The controller tracks live state for every Application across the
+        # whole cluster (11 apps here) - it OOMKilled at 512Mi, so it gets a
+        # larger ceiling than the shared default below.
+        - name: application-controller
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: server
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: repo-server
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-dex-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: dex-server
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-redis
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-applicationset-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: applicationset-controller
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-notifications-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: notifications-controller
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
