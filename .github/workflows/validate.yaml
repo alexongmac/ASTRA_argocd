@@ -47,6 +47,11 @@ jobs:
       # it reported all 7 as "missing property 'selector'". The patches are
       # validated as part of the built output in the next step instead, which
       # is what actually gets applied.
+      #
+      # Do NOT quote the pattern. This action passes args through a shell, so
+      # 'bootstrap/argocd-install/.*' arrives at kubeconform with the quotes
+      # still attached, matches nothing, and every patch is validated anyway -
+      # the flag looks present in the log while doing nothing (run #53).
       - name: kubeconform
         uses: docker://ghcr.io/yannh/kubeconform:latest
         with:
@@ -54,7 +59,7 @@ jobs:
             -summary
             -ignore-missing-schemas
             -skip CustomResourceDefinition
-            -ignore-filename-pattern 'bootstrap/argocd-install/.*'
+            -ignore-filename-pattern bootstrap/argocd-install/.*
             -kubernetes-version 1.31.0
             Applications bootstrap kyverno-policies
 
