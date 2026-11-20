@@ -6,6 +6,10 @@ on:
       - "Applications/**"
       - "bootstrap/**"
       - "kyverno-policies/**"
+      # Watch itself. Without this a change to the lint rules never runs
+      # them, so a fix for a failing check cannot be verified by pushing it -
+      # the run simply does not trigger.
+      - ".github/workflows/validate.yaml"
   push:
     branches:
       - main
@@ -14,6 +18,7 @@ on:
       - "Applications/**"
       - "bootstrap/**"
       - "kyverno-policies/**"
+      - ".github/workflows/validate.yaml"
 
 jobs:
   lint:
