@@ -19,7 +19,7 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
-    targetRevision: 93.2.2 # example only; pin the version currently deployed
+    targetRevision: 93.2.2
     helm:
       releaseName: kube-prometheus-stack
       valuesObject:
@@ -157,6 +157,16 @@ spec:
             limits:
               cpu: 100m
               memory: 128Mi
+          # kube_pod_container_status_last_terminated_reason is opt-in: without
+          # this flag the metric has 0 series, so any rule referencing it is
+          # created, accepted, and never evaluated - no alert, no error. The
+          # chart also dropped KubeContainerOOMKilled, so without this an OOM
+          # kill surfaces only as a generic restart 15 minutes later with no
+          # indication that memory was the cause.
+          metricLabelsAllowlist:
+            - pods=[*]
+          extraArgs:
+            - --metric-opt-in-list=kube_pod_container_status_last_terminated_reason
         # --reuse-values: add every other value from your existing release here
   destination:
     server: https://kubernetes.default.svc
