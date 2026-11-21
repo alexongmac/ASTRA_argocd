@@ -75,6 +75,11 @@ spec:
                 cpu: 500m
                 memory: 1Gi
         alertmanager:
+          # Mount the Discord webhook URL from a secret created out-of-band
+          # (kubectl create secret generic alertmanager-discord -n monitoring
+          # --from-literal=webhook-url=...). Keeping it out of git means this
+          # file stays safe to commit; the tradeoff is that the secret must be
+          # recreated by hand if the namespace is ever rebuilt.
           alertmanagerSpec:
             replicas: 2
             resources:
@@ -84,6 +89,58 @@ spec:
               limits:
                 cpu: 100m
                 memory: 256Mi
+            secrets:
+              - alertmanager-discord
+          config:
+            global:
+              resolve_timeout: 5m
+            route:
+              group_by: ["alertname", "namespace"]
+              group_wait: 30s
+              group_interval: 5m
+              # 4h rather than the chart's 12h: long enough not to spam, short
+              # enough that a still-firing problem resurfaces within a workday.
+              repeat_interval: 4h
+              receiver: discord
+              routes:
+                # Watchdog fires constantly by design - it is the deadman switch
+                # proving the alert pipeline works. Routing it to Discord would
+                # post every repeat_interval forever.
+                - matchers:
+                    - alertname = "Watchdog"
+                  receiver: "null"
+                # EKS runs the control plane as a managed service, so these
+                # components are not scrapeable from inside the cluster and
+                # Prometheus permanently reports them down. They are false
+                # positives on every EKS cluster, not a real outage.
+                - matchers:
+                    - alertname =~ "KubeControllerManagerDown|KubeSchedulerDown|KubeProxyDown"
+                  receiver: "null"
+                - matchers:
+                    - severity = "critical"
+                  receiver: discord-critical
+            receivers:
+              - name: "null"
+              - name: discord
+                discord_configs:
+                  - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/webhook-url
+                    send_resolved: true
+                    title: '{{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+                    message: |-
+                      {{ range .Alerts }}**{{ .Labels.severity }}** · `{{ .Labels.namespace }}{{ if .Labels.pod }}/{{ .Labels.pod }}{{ end }}`
+                      {{ .Annotations.summary }}
+                      {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+                      {{ end }}
+              - name: discord-critical
+                discord_configs:
+                  - webhook_url_file: /etc/alertmanager/secrets/alertmanager-discord/webhook-url
+                    send_resolved: true
+                    title: '{{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }} [CRITICAL] {{ .CommonLabels.alertname }}'
+                    message: |-
+                      {{ range .Alerts }}**{{ .Labels.severity }}** · `{{ .Labels.namespace }}{{ if .Labels.pod }}/{{ .Labels.pod }}{{ end }}`
+                      {{ .Annotations.summary }}
+                      {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+                      {{ end }}
         prometheus-node-exporter:
           resources:
             requests:
