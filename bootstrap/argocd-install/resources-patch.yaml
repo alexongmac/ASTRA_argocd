@@ -1,15 +1,3 @@
-# Resource requests/limits for every ArgoCD component.
-#
-# Ported verbatim from the ASTRA repo's 23-argocd.tf locals
-# (argocd_default_resources / argocd_controller_resources), which this
-# replaces. Upstream install.yaml sets no resources at all, and Kyverno's
-# require-resource-limits ClusterPolicy flags every such container.
-#
-# These are strategic-merge patches: each document names the workload and the
-# container, and lists ONLY the fields to change. Everything else - image,
-# args, env, volumes, probes - is taken from upstream untouched. That is why
-# these few lines can safely modify a 37,000-line input.
-#
 # CONTAINER NAMES MUST MATCH UPSTREAM, NOT THE HELM CHART. They differ, and
 # this is the one thing to get right here:
 #
