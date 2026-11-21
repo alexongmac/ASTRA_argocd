@@ -4,7 +4,7 @@ metadata:
   name: astra-web-app
   namespace: web-app
 spec:
-  replicas: 2
+  # replica count is managed by the HPA (hpa.yaml), not here
   selector:
     matchLabels:
       app: astra-web-app
