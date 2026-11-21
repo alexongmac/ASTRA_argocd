@@ -17,6 +17,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: web-app
+  ignoreDifferences:
+    # replicas is managed by the HPA (envs/development/web-app/hpa.yaml) once
+    # it scales out, so don't let selfHeal fight it back down to the Git value.
+    - group: apps
+      kind: Deployment
+      name: astra-web-app
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
     automated:
       prune: true
