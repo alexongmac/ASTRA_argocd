@@ -53,6 +53,18 @@ spec:
           prometheus:
             service:
               enabled: true
+            # Without this, Traefik exposes metrics on :9100 but nothing
+            # scrapes them - ingress request rate, latency histograms and
+            # per-route status codes are produced and then discarded.
+            #
+            # additionalLabels is not optional: kube-prometheus-stack's
+            # Prometheus selects ServiceMonitors by `release: <helm release>`,
+            # so one created without that label is simply never picked up -
+            # the object exists, the target never appears, and nothing errors.
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: kube-prometheus-stack
   destination:
     server: https://kubernetes.default.svc
     namespace: traefik
