@@ -24,6 +24,27 @@ spec:
       releaseName: kube-prometheus-stack
       valuesObject:
         grafana:
+          # The chart's default for /var/lib/grafana is an emptyDir, so every
+          # pod restart silently discards everything made through the UI:
+          # dashboards, alert rules, sessions, preferences. Lost real work this
+          # way on 2026-11-21 when scaling the node group from 5 to 7 moved the
+          # pod - no warning, no error, just an empty Grafana.
+          #
+          # The 29 dashboards the chart ships come from ConfigMaps and are
+          # recreated on every start, which is what made the loss easy to miss:
+          # Grafana looks populated while the hand-made work is gone.
+          #
+          # An EBS volume is zone-locked, so this pins the pod to the volume's
+          # AZ. Fine at replicas: 1, and the same arrangement storage-loki-0
+          # already uses - that PVC survived both the node group rebuild and
+          # the nightly sweep.
+          persistence:
+            enabled: true
+            type: pvc
+            size: 5Gi
+            storageClassName: gp2
+            accessModes:
+              - ReadWriteOnce
           # 256Mi OOMKilled Grafana 13.x on startup (search-index build etc.) -
           # needs more headroom than steady-state usage suggests.
           resources:
