@@ -5,6 +5,7 @@ metadata:
   namespace: monitoring
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: monitoring-basic-auth@kubernetescrd
     external-dns.kubernetes.io/hostname: astra-prom.sctp-sandbox.com
 spec:
   ingressClassName: traefik
