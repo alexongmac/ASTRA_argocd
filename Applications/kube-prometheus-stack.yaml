@@ -45,6 +45,15 @@ spec:
             storageClassName: gp2
             accessModes:
               - ReadWriteOnce
+          # An RWO volume can be attached to one node at a time. The default
+          # RollingUpdate starts the new pod before stopping the old one, and
+          # when the scheduler puts it on a different node it waits forever in
+          # Init on FailedAttachVolume ("Volume is already used by pod(s)").
+          # Hit this on 2026-11-23 restarting Grafana to pick up Pod Identity
+          # credentials. Recreate stops the old pod first, costing a few
+          # seconds of downtime on each change instead of a deadlock.
+          deploymentStrategy:
+            type: Recreate
           # 256Mi OOMKilled Grafana 13.x on startup (search-index build etc.) -
           # needs more headroom than steady-state usage suggests.
           resources:
@@ -68,6 +77,19 @@ spec:
               access: proxy
               url: http://loki.monitoring.svc.cluster.local:3100
               isDefault: false
+            # AWS ALB and WAF metrics for the web app. The app is exposed
+            # through an ALB, not Traefik, so Traefik's metrics never see its
+            # traffic; CloudWatch is where request counts, 4XX/5XX and latency
+            # live. No keys here: authType "default" uses the AWS SDK chain,
+            # which picks up the Pod Identity credentials granted to this pod's
+            # service account by 22-grafana-cloudwatch.tf in the ASTRA repo.
+            - name: CloudWatch
+              type: cloudwatch
+              access: proxy
+              isDefault: false
+              jsonData:
+                authType: default
+                defaultRegion: us-east-1
         prometheusOperator:
           resources:
             requests:
