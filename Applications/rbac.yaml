@@ -23,7 +23,6 @@ rules:
       - pods/exec
       - services
       - configmaps
-      - secrets
       - serviceaccounts
       - persistentvolumeclaims
       - deployments
@@ -36,6 +35,12 @@ rules:
       - endpoints
       - events
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # secrets: no get/list - that would let anyone read astra-web-app's
+  # DATABASE_URL (astradb credentials) back out of the cluster. Charts can
+  # still create/update/delete their own secrets during install/upgrade.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "delete", "watch"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -109,8 +114,32 @@ kind: ClusterRole
 metadata:
   name: sre
 rules:
-  - apiGroups: ["*"]
+  # Everything outside the core ("") API group, read-only. Secrets live in
+  # the core group, so this wildcard can't cover them - see below. Only the
+  # cluster-admin identity (AmazonEKSClusterAdminPolicy -> system:masters,
+  # which bypasses RBAC entirely) can read the astra-web-app Secret that
+  # holds the RDS astradb credentials.
+  - apiGroups: ["apps", "batch", "networking.k8s.io", "metrics.k8s.io", "argoproj.io", "aquasecurity.github.io", "kyverno.io", "wgpolicyk8s.io", "rbac.authorization.k8s.io", "autoscaling", "policy", "storage.k8s.io", "coordination.k8s.io", "discovery.k8s.io", "node.k8s.io", "scheduling.k8s.io", "apiextensions.k8s.io", "admissionregistration.k8s.io", "cert-manager.io", "acme.cert-manager.io", "traefik.io", "monitoring.coreos.com"]
     resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  # Core API group, read-only, everything except secrets.
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - configmaps
+      - serviceaccounts
+      - persistentvolumeclaims
+      - persistentvolumes
+      - endpoints
+      - events
+      - namespaces
+      - nodes
+      - replicationcontrollers
+      - resourcequotas
+      - limitranges
+      - componentstatuses
+      - podtemplates
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["pods/log", "pods/exec"]
@@ -130,7 +159,6 @@ rules:
       - pods/exec
       - services
       - configmaps
-      - secrets
       - serviceaccounts
       - persistentvolumeclaims
       - deployments
@@ -143,6 +171,10 @@ rules:
       - endpoints
       - events
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # secrets: no get/list - see the sre read-only rule above for why.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "delete", "watch"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
