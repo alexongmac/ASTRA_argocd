@@ -15,6 +15,8 @@ spec:
     - "https://kyverno.github.io/kyverno/"
     - "https://aquasecurity.github.io/helm-charts/"
     - "https://charts.jetstack.io"
+    - "https://charts.external-secrets.io"
+    - "https://stakater.github.io/stakater-charts"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc

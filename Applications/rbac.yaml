@@ -105,20 +105,21 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
-# sre: cluster-wide read on everything plus the operational actions needed
-# to debug/mitigate incidents (logs, exec, scale, restart via patch on
-# deployments/statefulsets), plus the same write rights as developer
-# (workloads, RBAC roles/rolebindings, namespace creation).
+# sre: read-only. Cluster-wide read on everything except secrets (pods, nodes,
+# services and the rest), plus pod logs. No exec, no delete, no create, update
+# or patch of anything: an SRE can look at the cluster but not change it.
+# Changes go through a developer or the cluster admin.
+#
+# Secrets are left out on purpose. They live in the core ("") group, which the
+# wildcard below does not cover, and only the cluster-admin identity
+# (AmazonEKSClusterAdminPolicy -> system:masters) can read the astra-web-app
+# Secret that holds the RDS astradb credentials.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: sre
 rules:
-  # Everything outside the core ("") API group, read-only. Secrets live in
-  # the core group, so this wildcard can't cover them - see below. Only the
-  # cluster-admin identity (AmazonEKSClusterAdminPolicy -> system:masters,
-  # which bypasses RBAC entirely) can read the astra-web-app Secret that
-  # holds the RDS astradb credentials.
+  # Everything outside the core ("") API group, read-only.
   - apiGroups: ["apps", "batch", "networking.k8s.io", "metrics.k8s.io", "argoproj.io", "aquasecurity.github.io", "kyverno.io", "wgpolicyk8s.io", "rbac.authorization.k8s.io", "autoscaling", "policy", "storage.k8s.io", "coordination.k8s.io", "discovery.k8s.io", "node.k8s.io", "scheduling.k8s.io", "apiextensions.k8s.io", "admissionregistration.k8s.io", "cert-manager.io", "acme.cert-manager.io", "traefik.io", "monitoring.coreos.com"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
@@ -126,6 +127,7 @@ rules:
   - apiGroups: [""]
     resources:
       - pods
+      - pods/log
       - services
       - configmaps
       - serviceaccounts
@@ -141,50 +143,9 @@ rules:
       - componentstatuses
       - podtemplates
     verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/log", "pods/exec"]
-    verbs: ["get", "create"]
-  - apiGroups: ["apps"]
-    resources:
-      ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
-    verbs: ["patch", "update"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["delete"]
-  # same write rights as developer
-  - apiGroups: ["", "apps", "batch", "networking.k8s.io"]
-    resources:
-      - pods
-      - pods/log
-      - pods/exec
-      - services
-      - configmaps
-      - serviceaccounts
-      - persistentvolumeclaims
-      - deployments
-      - replicasets
-      - statefulsets
-      - daemonsets
-      - jobs
-      - cronjobs
-      - ingresses
-      - endpoints
-      - events
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # secrets: no get/list - see the sre read-only rule above for why.
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["create", "update", "patch", "delete", "watch"]
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["roles", "rolebindings"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["create", "get", "list", "watch"]
-  - apiGroups: ["argoproj.io"]
-    resources: ["applications", "applicationsets"]
-    verbs: ["get", "list", "watch", "update", "patch"]
 ---
+# Unchanged from before: same name, same role reference (sre), so it applies in
+# place. Only the sre role's rules above got narrower.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

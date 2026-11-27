@@ -60,6 +60,14 @@ https://astra-argcd.sctp-sandbox.com
 
 histogram_quantile(0.95, sum by (service,le) (rate(traefik_service_request_duration_seconds_bucket[5m])))
 
-### Import Grafana dashboard 17346 (official Traefik v3) — instant visualisation, no custom work.
+### Import Grafana dashboard 17346 (official Traefik v3) — instant visualization, no custom work.
 
-Dashboards → Import → paste `17346` → select Prometheus.
+Dashboards → new -> Import → paste `17346` → select Prometheus -> load
+
+### Change password for prometheus and alertmanager
+
+kubectl create secret generic monitoring-basic-auth \
+ --from-literal=username=<username> \
+ --from-literal=password=<password> \
+ --namespace monitoring \
+ --type kubernetes.io/basic-auth

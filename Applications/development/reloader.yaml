@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+  namespace: argocd
+spec:
+  project: astra
+  source:
+    repoURL: https://stakater.github.io/stakater-charts
+    chart: reloader
+    targetRevision: 2.2.21
+    helm:
+      releaseName: reloader
+      valuesObject:
+        reloader:
+          # Watch only its own namespace, so Reloader's RBAC can read Secrets
+          # in web-app and nowhere else. It is installed into web-app for that
+          # reason. Only workloads annotated reloader.stakater.com/auto are
+          # restarted.
+          watchGlobally: false
+          deployment:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: web-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 4
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

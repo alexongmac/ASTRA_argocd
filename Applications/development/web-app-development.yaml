@@ -32,6 +32,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      # external-secret.yaml uses CRDs installed by the external-secrets app;
+      # without this the first sync fails until those CRDs exist.
+      - SkipDryRunOnMissingResource=true
     retry:
       limit: 5
       backoff:
