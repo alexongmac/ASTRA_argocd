@@ -3,6 +3,10 @@ kind: Deployment
 metadata:
   name: astra-web-app
   namespace: web-app
+  annotations:
+    # Reloader restarts the pods when astra-db-credentials changes after an
+    # RDS password rotation.
+    reloader.stakater.com/auto: "true"
 spec:
   # replica count is managed by the HPA (hpa.yaml), not here
   selector:
@@ -24,7 +28,9 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: astra-web-app
+                  # Kept current by External Secrets from the RDS-managed
+                  # password (external-secret.yaml); not edited by hand.
+                  name: astra-db-credentials
                   key: DATABASE_URL
             - name: AUTH_SECRET
               valueFrom:
@@ -65,6 +71,8 @@ kind: Deployment
 metadata:
   name: astra-web-app-worker
   namespace: web-app
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: 1
   selector:
@@ -84,7 +92,9 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: astra-web-app
+                  # Kept current by External Secrets from the RDS-managed
+                  # password (external-secret.yaml); not edited by hand.
+                  name: astra-db-credentials
                   key: DATABASE_URL
             - name: SQS_QUEUE_URL
               valueFrom:
